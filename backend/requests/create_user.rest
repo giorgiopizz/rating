@@ -1,0 +1,52 @@
+POST http://localhost:3001/api/new_user
+Content-Type: application/json
+
+{
+    "username": "giorgio",
+    "password": "giorgio"
+}
+
+
+
+
+
+###
+GET http://localhost:3001/api/points/giorgio
+
+
+###
+POST  http://localhost:3001/api/new_post
+Content-Type: application/json
+
+{
+    "username": "giorgio",
+    "post": "ciaooooo"
+}
+
+###
+POST http://localhost:3001/api/new_user
+Content-Type: application/json
+
+{
+    "username": "luca",
+    "password": "luca"
+}
+
+
+
+###
+POST  http://localhost:3001/api/new_like
+Content-Type: application/json
+
+{
+    "post_id": "1",
+    "sender": "luca",
+    "receiver": "luca",
+    "vote": "8"
+}
+
+###
+GET http://localhost:3001/api/likes/1
+
+###
+GET http://localhost:3001/api/points/giorgio
