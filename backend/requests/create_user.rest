@@ -11,7 +11,7 @@ Content-Type: application/json
 
 
 ###
-GET http://localhost:3001/api/points/giorgio
+GET http://localhost:3001/
 
 
 ###
@@ -39,9 +39,8 @@ POST  http://localhost:3001/api/new_like
 Content-Type: application/json
 
 {
-    "post_id": "1",
     "sender": "luca",
-    "receiver": "luca",
+    "receiver": "giorgio",
     "vote": "8"
 }
 
@@ -50,3 +49,30 @@ GET http://localhost:3001/api/likes/1
 
 ###
 GET http://localhost:3001/api/points/giorgio
+
+
+
+
+###
+POST http://localhost:3001/api/new_user
+Content-Type: application/json
+
+{
+    "username": "gio",
+    "password": "giorgio"
+}
+
+
+###
+POST  http://localhost:3001/api/new_like
+Content-Type: application/json
+
+{
+    "sender": "luca",
+    "receiver": "gio",
+    "vote": "10"
+}
+
+
+###
+GET http://localhost:3001/api/points/gio

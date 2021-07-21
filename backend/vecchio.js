@@ -1,64 +1,38 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
-var passport = require("passport");
-var crypto = require("crypto");
-var LocalStrategy = require("passport-local").Strategy;
-
-// Package documentation - https://www.npmjs.com/package/connect-mongo
-const MongoStore = require("connect-mongo")(session);
-
-/**
- * -------------- GENERAL SETUP ----------------
- */
-
-// Gives us access to variables set in the .env file via `process.env.VARIABLE_NAME` syntax
+const passport = require("passport");
+const crypto = require("crypto");
+const LocalStrategy = require("passport-local").Strategy;
+const cors = require("cors");
 require("dotenv").config();
 
-// Create the Express application
-var app = express();
+const MongoStore = require("connect-mongo");
+
+const app = express();
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/**
- * -------------- DATABASE ----------------
- */
-
-/**
- * Connect to MongoDB Server using the connection string in the `.env` file.  To implement this, place the following
- * string into the `.env` file
- *
- * DB_STRING=mongodb://<user>:<password>@localhost:27017/database_name
- */
-
 const conn = process.env.DB_STRING;
-
 const connection = mongoose.createConnection(conn, {
 	useNewUrlParser: true,
 	useUnifiedTopology: true,
 });
 
 connection.on("connecting", () => {
-	console.log("connected");
+	console.log("Connected to db");
 });
 
-// Creates simple schema for a User.  The hash and salt are derived from the user's given password when they register
 const UserSchema = new mongoose.Schema({
 	username: String,
 	hash: String,
 	salt: String,
 });
 
-const User = connection.model("User", UserSchema);
+const User = mongoose.model("User", UserSchema);
 
-/**
- * This function is called when the `passport.authenticate()` method is called.
- *
- * If a user is found an validated, a callback is called (`cb(null, user)`) with the user
- * object.  The user object is then serialized with `passport.serializeUser()` and added to the
- * `req.session.passport` object.
- */
 passport.use(
 	new LocalStrategy(function (username, password, cb) {
 		User.findOne({ username: username })
@@ -106,84 +80,25 @@ passport.deserializeUser(function (id, cb) {
 	});
 });
 
-/**
- * -------------- SESSION SETUP ----------------
- */
-
-/**
- * The MongoStore is used to store session data.  We will learn more about this in the post.
- *
- * Note that the `connection` used for the MongoStore is the same connection that we are using above
- */
 const sessionStore = new MongoStore({
 	mongooseConnection: connection,
 	collection: "sessions",
 });
 
-/**
- * See the documentation for all possible options - https://www.npmjs.com/package/express-session
- *
- * As a brief overview (we will add more later):
- *
- * secret: This is a random string that will be used to "authenticate" the session.  In a production environment,
- * you would want to set this to a long, randomly generated string
- *
- * resave: when set to true, this will force the session to save even if nothing changed.  If you don't set this,
- * the app will still run but you will get a warning in the terminal
- *
- * saveUninitialized: Similar to resave, when set true, this forces the session to be saved even if it is unitialized
- *
- * store: Sets the MemoryStore to the MongoStore setup earlier in the code.  This makes it so every new session will be
- * saved in a MongoDB database in a "sessions" table and used to lookup sessions
- *
- * cookie: The cookie object has several options, but the most important is the `maxAge` property.  If this is not set,
- * the cookie will expire when you close the browser.  Note that different browsers behave slightly differently with this
- * behaviour (for example, closing Chrome doesn't always wipe out the cookie since Chrome can be configured to run in the
- * background and "remember" your last browsing session)
- */
 app.use(
 	session({
-		//secret: process.env.SECRET,
-		secret: "some secret",
+		secret: process.env.SECRET,
 		resave: false,
 		saveUninitialized: true,
 		store: sessionStore,
 		cookie: {
-			maxAge: 1000 * 60 * 60 * 24, // Equals 1 day (1 day * 24 hr/1 day * 60 min/1 hr * 60 sec/1 min * 1000 ms / 1 sec)
+			maxAge: 1000 * 60 * 60 * 24,
 		},
 	})
 );
 
-/**
- * -------------- PASSPORT AUTHENTICATION ----------------
- */
-
-/**
- * Notice that these middlewares are initialized after the `express-session` middleware.  This is because
- * Passport relies on the `express-session` middleware and must have access to the `req.session` object.
- *
- * passport.initialize() - This creates middleware that runs before every HTTP request.  It works in two steps:
- *      1. Checks to see if the current session has a `req.session.passport` object on it.  This object will be
- *
- *          { user: '<Mongo DB user ID>' }
- *
- *      2.  If it finds a session with a `req.session.passport` property, it grabs the User ID and saves it to an
- *          internal Passport method for later.
- *
- * passport.session() - This calls the Passport Authenticator using the "Session Strategy".  Here are the basic
- * steps that this method takes:
- *      1.  Takes the MongoDB user ID obtained from the `passport.initialize()` method (run directly before) and passes
- *          it to the `passport.deserializeUser()` function (defined above in this module).  The `passport.deserializeUser()`
- *          function will look up the User by the given ID in the database and return it.
- *      2.  If the `passport.deserializeUser()` returns a user object, this user object is assigned to the `req.user` property
- *          and can be accessed within the route.  If no user is returned, nothing happens and `next()` is called.
- */
 app.use(passport.initialize());
 app.use(passport.session());
-
-/**
- * -------------- ROUTES ----------------
- */
 
 app.get("/", (req, res, next) => {
 	res.send('<h1>Home</h1><p>Please <a href="/register">register</a></p>');
@@ -277,12 +192,10 @@ app.get("/login-failure", (req, res, next) => {
 	res.send("You entered the wrong password.");
 });
 
-/**
- * -------------- SERVER ----------------
- */
-
-// Server listens on http://localhost:3000
-app.listen(3000);
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+	console.log(`Server running on port ${PORT}`);
+});
 
 /**
  * -------------- HELPER FUNCTIONS ----------------
@@ -325,3 +238,173 @@ function genPassword(password) {
 		hash: genHash,
 	};
 }
+
+// const mongoose = require("mongoose");
+// const url =
+// 	"mongodb+srv://fullstackopen:blablacarsti@cluster0.cqjoy.mongodb.net/rating?retryWrites=true&w=majority";
+
+// console.log("connecting to", url);
+// mongoose
+// 	.connect(url, {
+// 		useNewUrlParser: true,
+// 		useUnifiedTopology: true,
+// 		useFindAndModify: false,
+// 		useCreateIndex: true,
+// 	})
+// 	.then((result) => {
+// 		console.log("connected to MongoDB");
+// 	})
+// 	.catch((error) => {
+// 		console.log("error connecting to MongoDB:", error.message);
+// 	});
+
+// const userScheme = new mongoose.Schema({
+// 	username: String,
+// 	password: String,
+// 	points: Number,
+// 	ow: Number,
+// });
+
+// userScheme.set("toJSON", {
+// 	transform: (document, returnedObject) => {
+// 		returnedObject.id = returnedObject._id.toString();
+// 		delete returnedObject._id;
+// 		delete returnedObject.__v;
+// 	},
+// });
+
+// User = mongoose.model("User", userScheme);
+
+// const likeScheme = new mongoose.Schema({
+// 	receiver: String,
+// 	sender: String,
+// 	vote: Number,
+// });
+
+// likeScheme.set("toJSON", {
+// 	transform: (document, returnedObject) => {
+// 		returnedObject.id = returnedObject._id.toString();
+// 		delete returnedObject._id;
+// 		delete returnedObject.__v;
+// 	},
+// });
+// Like = mongoose.model("Like", likeScheme);
+
+// users = [];
+// posts = [];
+// likes = [];
+
+// const updatePoints = (like) => {
+// 	User.findOne({ username: like.receiver }, (err, result) => {
+// 		if (result) {
+// 			const receiver = result;
+// 			User.findOne({ username: like.sender }, (err, result) => {
+// 				if (result) {
+// 					console.log("trovato secondo userrr");
+// 					const sender = result;
+// 					const other_points = sender.points;
+// 					nw = receiver.ow + other_points;
+// 					const points =
+// 						(receiver.points * receiver.ow) / nw +
+// 						(other_points * parseInt(like.vote)) / nw;
+
+// 					const ow = nw;
+// 					User.findOneAndUpdate(
+// 						{ username: like.receiver },
+// 						{ points: points, ow: ow },
+// 						(err, result) => {
+// 							if (result) {
+// 								console.log("voto aggiornato");
+// 							} else {
+// 								console.log("errore nel salvataggio");
+// 							}
+// 						}
+// 					);
+// 				} else {
+// 					console.log("sender not found");
+// 				}
+// 			});
+// 		} else {
+// 			console.log("receiver not found");
+// 		}
+// 	});
+// };
+
+// const generateId = (array) => {
+// 	const maxId = array.length > 0 ? Math.max(...array.map((n) => n.id)) : 0;
+// 	return maxId + 1;
+// };
+
+// app.get("/", (request, response) => {
+// 	response.send("<h1>Hello World!</h1>");
+// });
+
+// app.get("/api/points/:username", (request, response) => {
+// 	User.findOne({ username: request.params.username }, (err, result) => {
+// 		if (result) {
+// 			response.json({ Points: result.points });
+// 		} else {
+// 			response.status(404).send("User not found");
+// 		}
+// 	});
+// });
+
+// app.post("/api/new_user", (request, response) => {
+// 	const user = request.body;
+// 	if (!user.username) {
+// 		return response.status(400).json({
+// 			error: "content missing",
+// 		});
+// 	}
+
+// 	User.findOne({ username: user.username }, (error, res) => {
+// 		if (res) {
+// 			console.log(res);
+// 			return response.status(400).json({
+// 				error: "User already exist",
+// 			});
+// 		} else {
+// 			const user_c = new User({
+// 				username: user.username,
+// 				password: user.password,
+// 				points: 6,
+// 				ow: 1,
+// 			});
+// 			// users.push(user);
+// 			user_c.save().then((result) => {
+// 				console.log("created user");
+// 				response.json(user);
+// 			});
+// 		}
+// 	});
+// });
+
+// app.post("/api/new_post", (request, response) => {
+// 	const post = request.body;
+// 	post["id"] = generateId(posts);
+// 	post["likes"] = [];
+// 	posts.push(post);
+// 	response.json(post);
+// 	console.log(posts);
+// });
+
+// app.get("/api/likes/:id", (request, response) => {
+// 	for (let element of posts) {
+// 		if (element.id === parseInt(request.params.id)) {
+// 			response.json({ Likes: element.likes });
+// 			return;
+// 		}
+// 	}
+// 	response.status(404).send("Post not found");
+// });
+
+// app.post("/api/new_like", (request, response) => {
+// 	const like = request.body;
+// 	updatePoints(like);
+// 	response.json(like);
+// });
+
+// const PORT = 3001;
+// app.listen(PORT, () => {
+// 	console.log(`Server running on port ${PORT}`);
+// });
