@@ -5,9 +5,7 @@ import { useGestureResponder } from "react-gesture-responder";
 import axios from "axios";
 import AuthService from "../services/auth.service";
 import UserService from "../services/user.service";
-const round = (x, precision) => {
-	return Math.round(x * precision) / precision;
-};
+import Utils from "../services/utils";
 
 export default function SearchedUser(props) {
 	const currentUser = AuthService.getCurrentUser();
@@ -93,7 +91,7 @@ export default function SearchedUser(props) {
 			.then((response) => {
 				console.log("promise fulfilled " + response.data);
 				if (response.data !== "not found") {
-					setVote(round(response.data.vote, 1000));
+					setVote(Utils.round(response.data.vote, 1000));
 					setUserFound(true);
 					setVoteToSend(6);
 					setSend(false);
