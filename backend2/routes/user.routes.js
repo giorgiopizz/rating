@@ -15,5 +15,5 @@ module.exports = function (app) {
 	app.get("/api/test/user/:user", authJwt, controller.userBoard);
 
 	app.get("/api/test/vote/:user", controller.vote);
-	app.post("/api/test/newlike", controller.newLike);
+	app.post("/api/test/newlike", authJwt, controller.newLike);
 };
